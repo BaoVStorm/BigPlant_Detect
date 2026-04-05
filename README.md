@@ -151,7 +151,7 @@ MODEL=efficientnetv2s-segformerb4.pt
 Nếu để trống `MODEL`, app tự chọn checkpoint theo thứ tự:
 
 - ưu tiên `./model/<MODEL_SCRIPT>/best_model.pt` (nếu có)
-- nếu thư mục chỉ có đúng 1 file `.pt`, tự dùng file đó
+- tiếp theo `./model/<MODEL_SCRIPT>/<MODEL_SCRIPT>.pt`
 
 Gợi ý cấu trúc thư mục:
 

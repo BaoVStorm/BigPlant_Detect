@@ -42,7 +42,7 @@ def _resolve_model_path(model_script_dir: str) -> str:
     Priority:
     1) MODEL env (file name inside model_script_dir or absolute path)
     2) best_model.pt inside model_script_dir
-    3) if exactly one .pt file exists in model_script_dir, use it
+    3) <MODEL_SCRIPT>.pt inside model_script_dir
     """
     model_env = os.getenv("MODEL", "").strip().strip('"')
     if model_env:
@@ -54,12 +54,10 @@ def _resolve_model_path(model_script_dir: str) -> str:
     if os.path.isfile(best_path):
         return best_path
 
-    if os.path.isdir(model_script_dir):
-        pt_files = sorted(
-            [os.path.join(model_script_dir, name) for name in os.listdir(model_script_dir) if name.lower().endswith(".pt")]
-        )
-        if len(pt_files) == 1:
-            return pt_files[0]
+    script_name = (MODEL_SCRIPT or "").strip().lower()
+    script_named_path = os.path.join(model_script_dir, f"{script_name}.pt")
+    if os.path.isfile(script_named_path):
+        return script_named_path
 
     return best_path
 
