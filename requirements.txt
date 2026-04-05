@@ -9,3 +9,4 @@ pydantic
 onnx
 onnxruntime-gpu
 python-dotenv
+transformers

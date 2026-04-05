@@ -42,7 +42,9 @@ You should see `TensorrtExecutionProvider` in the output.
 
 Required/common:
 
-- `CKPT` path to `.pt` checkpoint (default `./model/best_model.pt`)
+- `MODEL_SCRIPT` chọn thư mục model con (ví dụ `organ_aware_switch_vit`)
+- `MODEL_DIR` thư mục gốc model (mặc định `./model`)
+- `MODEL` (tuỳ chọn) tên file `.pt` trong `./model/<MODEL_SCRIPT>/`
 - `DEVICE` should be `cuda` or `cuda:0` for TensorRT
 - `INFER_BACKEND=tensorrt`
 
@@ -58,11 +60,13 @@ TensorRT-specific:
 Example (Windows PowerShell):
 
 ```powershell
-$env:CKPT="D:\Homework\BackEnd\ModelDetectApi\model\best_model.pt"
+$env:MODEL_SCRIPT="organ_aware_switch_vit"
+$env:MODEL_DIR="D:\Homework\BackEnd\ModelDetectApi\model"
+$env:MODEL="best_model.pt"
 $env:DEVICE="cuda:0"
 $env:INFER_BACKEND="tensorrt"
-$env:ONNX_PATH="D:\Homework\BackEnd\ModelDetectApi\model\best_model.onnx"
-$env:TRT_ENGINE_CACHE_DIR="D:\Homework\BackEnd\ModelDetectApi\model\trt_cache"
+$env:ONNX_PATH="D:\Homework\BackEnd\ModelDetectApi\model\organ_aware_switch_vit\organ_aware_switch_vit.onnx"
+$env:TRT_ENGINE_CACHE_DIR="D:\Homework\BackEnd\ModelDetectApi\model\organ_aware_switch_vit\organ_aware_switch_vit_trt_cache"
 $env:TRT_FP16="1"
 $env:TRT_STRICT="1"
 $env:TRT_WORKSPACE_GB="4"

@@ -29,6 +29,12 @@ def set_runtime(model, class_names, meta, device):
     DEVICE = device
 
 
+def _preprocess_mode() -> str:
+    if not isinstance(META, dict):
+        return "imagenet_norm"
+    return str(META.get("preprocess_mode", "imagenet_norm"))
+
+
 @router.get("/health")
 def health():
     return {"status": "ok", "device": str(DEVICE), "model": META}
@@ -49,7 +55,7 @@ async def predict_file(
         raise HTTPException(status_code=400, detail="Invalid image file")
 
     t_pre0 = time.perf_counter()
-    x = preprocess_pil(img, device=DEVICE)
+    x = preprocess_pil(img, device=DEVICE, mode=_preprocess_mode())
     t_pre1 = time.perf_counter()
 
     out = predict_one(
@@ -86,7 +92,7 @@ def predict_base64(req: PredictB64Request):
         raise HTTPException(status_code=400, detail="Invalid base64 image")
 
     t_pre0 = time.perf_counter()
-    x = preprocess_pil(img, device=DEVICE)
+    x = preprocess_pil(img, device=DEVICE, mode=_preprocess_mode())
     t_pre1 = time.perf_counter()
 
     out = predict_one(

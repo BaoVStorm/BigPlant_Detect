@@ -24,7 +24,10 @@ def create_app() -> FastAPI:
     device = choose_device(DEVICE)
 
     if not os.path.isfile(CHECKPOINT_PATH):
-        raise RuntimeError(f"Checkpoint not found: {CHECKPOINT_PATH} (set env CKPT=...)")
+        raise RuntimeError(
+            f"Checkpoint not found: {CHECKPOINT_PATH} "
+            "(set MODEL_SCRIPT/MODEL_DIR and optional MODEL in .env)"
+        )
 
     ckpt = load_checkpoint(CHECKPOINT_PATH)
     model, class_names, meta = build_runtime_from_ckpt(

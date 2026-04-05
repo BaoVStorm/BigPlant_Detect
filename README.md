@@ -32,14 +32,13 @@ Project đã đọc `.env` tự động tại `app/core/config.py`.
 Ví dụ `.env` hiện tại:
 
 ```env
-CKPT=./model/best_model.pt
+MODEL_DIR=./model
+MODEL_SCRIPT=organ_aware_switch_vit
+MODEL=
 DEVICE=cuda:0
 TOPK=5
-MODEL_SCRIPT=organ_aware_switch_vit
 
 INFER_BACKEND=tensorrt
-ONNX_PATH=./model/best_model.onnx
-TRT_ENGINE_CACHE_DIR=./model/trt_cache
 TRT_DEVICE_ID=0
 TRT_FP16=1
 TRT_STRICT=1
@@ -48,12 +47,13 @@ TRT_WORKSPACE_GB=4
 
 Giải thích nhanh biến quan trọng:
 
-- `CKPT`: đường dẫn model `.pt`
+- `MODEL`: (tuỳ chọn) tên file model `.pt` trong `./model/<MODEL_SCRIPT>/` hoặc đường dẫn tuyệt đối
+- `MODEL_DIR`: thư mục gốc chứa model theo từng script
 - `DEVICE`: `auto|cpu|cuda|cuda:0`
 - `MODEL_SCRIPT`: `organ_aware_switch_vit` hoặc `efficientnetv2-segformer`
 - `INFER_BACKEND`: `pytorch` hoặc `tensorrt`
-- `ONNX_PATH`: nơi lưu file ONNX export tự động
-- `TRT_ENGINE_CACHE_DIR`: cache engine TensorRT
+- `ONNX_PATH`: mặc định tự suy ra `./model/<MODEL_SCRIPT>/<MODEL_SCRIPT>.onnx`
+- `TRT_ENGINE_CACHE_DIR`: mặc định `./model/<MODEL_SCRIPT>/<MODEL_SCRIPT>_trt_cache`
 - `TRT_FP16`: bật FP16 để tăng tốc
 - `TRT_STRICT=1`: chỉ dùng TensorRT (không fallback)
 
@@ -133,10 +133,49 @@ INFER_BACKEND=tensorrt
 
 ## 9) Troubleshooting thường gặp
 
-- `Checkpoint not found`: kiểm tra `CKPT` trong `.env`
+- `Checkpoint not found`: kiểm tra `MODEL_SCRIPT`, `MODEL_DIR`, và `MODEL` (nếu có set)
 - `TensorRT EP is not available`: version ORT/TensorRT/CUDA chưa tương thích
 - Lỗi ONNX export: model có logic dynamic, có thể cần fallback `pytorch`
-- `MODEL_SCRIPT=efficientnetv2-segformer` hiện mới khai báo selector, chưa implement pipeline inference
+
+## 10) Dùng model `efficientnetv2-segformer`
+
+Đã hỗ trợ nạp checkpoint `efficientnetv2s-segformerb4.pt` cho inference PyTorch.
+
+```env
+MODEL_SCRIPT=efficientnetv2-segformer
+INFER_BACKEND=pytorch
+MODEL_DIR=./model
+MODEL=efficientnetv2s-segformerb4.pt
+```
+
+Nếu để trống `MODEL`, app tự chọn checkpoint theo thứ tự:
+
+- ưu tiên `./model/<MODEL_SCRIPT>/best_model.pt` (nếu có)
+- nếu thư mục chỉ có đúng 1 file `.pt`, tự dùng file đó
+
+Gợi ý cấu trúc thư mục:
+
+```text
+model/
+  organ_aware_switch_vit/
+    best_model.pt
+    organ_aware_switch_vit.onnx
+    organ_aware_switch_vit_trt_cache/
+  efficientnetv2-segformer/
+    efficientnetv2s-segformerb4.pt
+    efficientnetv2-segformer.onnx
+    efficientnetv2-segformer_trt_cache/
+```
+
+Thông số train của checkpoint (tham chiếu bạn cung cấp):
+
+- `epochs=50`
+- `batch_size=32`
+- `lr=1e-4`
+- `weight_decay=1e-4`
+- `mask_score_threshold=0.5`
+
+Lưu ý: TensorRT hiện chưa bật cho `efficientnetv2-segformer`.
 
 ---
 
