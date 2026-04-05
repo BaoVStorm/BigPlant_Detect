@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-multipart
+pillow
+torch
+torchvision
+timm
+pydantic
+onnx
+onnxruntime-gpu
+python-dotenv
