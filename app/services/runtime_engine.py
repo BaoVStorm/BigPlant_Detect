@@ -41,13 +41,7 @@ class TensorRTRuntime:
             )
 
         if os.name == "nt":
-            try:
-                ctypes.WinDLL("nvinfer_10.dll")
-            except OSError as exc:
-                raise RuntimeError(
-                    "TensorRT runtime DLL not found: nvinfer_10.dll. "
-                    "Install TensorRT 10.x and add its lib folder to PATH."
-                ) from exc
+            self._ensure_tensorrt_windows_dlls()
 
         trt_options = {
             "device_id": device_id,
@@ -73,6 +67,80 @@ class TensorRTRuntime:
                 "TensorRT strict mode is enabled but session did not activate TensorRT provider. "
                 f"Active providers: {active_providers}"
             )
+
+    @staticmethod
+    def _ensure_tensorrt_windows_dlls() -> None:
+        """
+        Ensure TensorRT runtime DLL is loadable on Windows.
+
+        We try common DLL names and search dirs from:
+        - TRT_DLL_DIR (direct bin folder)
+        - TRT_ROOT (+ "bin")
+        - PATH
+        """
+        dll_names = [
+            "nvinfer_10.dll",
+            "nvinfer_9.dll",
+            "nvinfer_8.dll",
+            "nvinfer.dll",
+        ]
+
+        search_dirs = []
+
+        trt_dll_dir = os.getenv("TRT_DLL_DIR", "").strip().strip('"')
+        if trt_dll_dir:
+            search_dirs.append(trt_dll_dir)
+
+        trt_root = os.getenv("TRT_ROOT", "").strip().strip('"')
+        if trt_root:
+            search_dirs.append(os.path.join(trt_root, "bin"))
+
+        for p in os.environ.get("PATH", "").split(os.pathsep):
+            p = p.strip().strip('"')
+            if p:
+                search_dirs.append(p)
+
+        # De-duplicate while preserving order
+        seen = set()
+        uniq_dirs = []
+        for d in search_dirs:
+            if d not in seen:
+                seen.add(d)
+                uniq_dirs.append(d)
+
+        if hasattr(os, "add_dll_directory"):
+            for d in uniq_dirs:
+                if os.path.isdir(d):
+                    try:
+                        os.add_dll_directory(d)
+                    except Exception:
+                        pass
+
+        # 1) try full-path load from known dirs first (more reliable)
+        for d in uniq_dirs:
+            for name in dll_names:
+                full = os.path.join(d, name)
+                if os.path.isfile(full):
+                    try:
+                        ctypes.WinDLL(full)
+                        return
+                    except OSError:
+                        continue
+
+        # 2) then try by name
+        for name in dll_names:
+            try:
+                ctypes.WinDLL(name)
+                return
+            except OSError:
+                continue
+
+        raise RuntimeError(
+            "TensorRT runtime DLL not loadable on Windows. "
+            "Expected one of: nvinfer_10.dll / nvinfer_9.dll / nvinfer_8.dll. "
+            "Set TRT_DLL_DIR to TensorRT bin directory (e.g. D:\\App\\TensorRT-10.x\\bin) "
+            "or add that bin folder to PATH."
+        )
 
     def forward(self, x: torch.Tensor, prior: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor | None, None, None]:
         x_np = x.detach().to("cpu").numpy().astype(np.float32, copy=False)

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from app.core.config import (
     CHECKPOINT_PATH,
     DEVICE,
+    MODEL_SCRIPT,
     INFER_BACKEND,
     ONNX_PATH,
     TRT_ENGINE_CACHE_DIR,
@@ -29,6 +30,7 @@ def create_app() -> FastAPI:
     model, class_names, meta = build_runtime_from_ckpt(
         ckpt,
         device=device,
+        model_script=MODEL_SCRIPT,
         infer_backend=INFER_BACKEND,
         onnx_path=ONNX_PATH,
         trt_engine_cache_dir=TRT_ENGINE_CACHE_DIR,

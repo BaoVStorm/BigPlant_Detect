@@ -31,6 +31,9 @@ else:
 # CHECKPOINT_PATH can be overridden by env CKPT
 CHECKPOINT_PATH = os.getenv("CKPT", "./model/best_model.pt")
 
+# Model script selector: organ_aware_switch_vit|efficientnetv2-segformer
+MODEL_SCRIPT = os.getenv("MODEL_SCRIPT", "organ_aware_switch_vit").strip()
+
 # Inference backend: pytorch|tensorrt
 INFER_BACKEND = os.getenv("INFER_BACKEND", "pytorch").strip().lower()
 

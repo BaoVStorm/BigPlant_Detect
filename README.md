@@ -35,6 +35,7 @@ Ví dụ `.env` hiện tại:
 CKPT=./model/best_model.pt
 DEVICE=cuda:0
 TOPK=5
+MODEL_SCRIPT=organ_aware_switch_vit
 
 INFER_BACKEND=tensorrt
 ONNX_PATH=./model/best_model.onnx
@@ -49,6 +50,7 @@ Giải thích nhanh biến quan trọng:
 
 - `CKPT`: đường dẫn model `.pt`
 - `DEVICE`: `auto|cpu|cuda|cuda:0`
+- `MODEL_SCRIPT`: `organ_aware_switch_vit` hoặc `efficientnetv2-segformer`
 - `INFER_BACKEND`: `pytorch` hoặc `tensorrt`
 - `ONNX_PATH`: nơi lưu file ONNX export tự động
 - `TRT_ENGINE_CACHE_DIR`: cache engine TensorRT
@@ -62,6 +64,7 @@ uvicorn api_server:app --host 0.0.0.0 --port 8000
 ```
 
 D:\App\anaconda3\envs\pt_gpu\python.exe -m uvicorn api_server:app --host 0.0.0.0 --port 8000
+D:\App\anaconda3\envs\pt_gpu\python.exe -c "import ctypes; ctypes.WinDLL('nvinfer_10.dll'); ctypes.WinDLL('nvinfer_plugin_10.dll'); ctypes.WinDLL('nvonnxparser_10.dll'); print('TRT DLL chain OK')"
 
 Hoặc:
 
@@ -133,6 +136,7 @@ INFER_BACKEND=tensorrt
 - `Checkpoint not found`: kiểm tra `CKPT` trong `.env`
 - `TensorRT EP is not available`: version ORT/TensorRT/CUDA chưa tương thích
 - Lỗi ONNX export: model có logic dynamic, có thể cần fallback `pytorch`
+- `MODEL_SCRIPT=efficientnetv2-segformer` hiện mới khai báo selector, chưa implement pipeline inference
 
 ---
 
