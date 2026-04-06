@@ -2,8 +2,8 @@ import os
 from typing import Dict, Any, List, Tuple
 import torch
 
-from app.services.onnx_export import export_model_to_onnx
-from app.services.runtime_engine import TensorRTRuntime
+from app.services.onnx_export import export_model_to_onnx, export_image_model_to_onnx
+from app.services.runtime_engine import TensorRTRuntime, EfficientSegformerTensorRTRuntime
 
 
 def _resolve_model_class(model_script: str):
@@ -34,9 +34,21 @@ def load_checkpoint(ckpt_path: str) -> Dict[str, Any]:
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
     except TypeError:
         ckpt = torch.load(ckpt_path, map_location="cpu")
-    if not isinstance(ckpt, dict) or "model_state_dict" not in ckpt:
-        raise ValueError("Invalid checkpoint format. Expect dict with model_state_dict.")
-    return ckpt
+
+    if not isinstance(ckpt, dict):
+        raise ValueError("Invalid checkpoint format. Expect a dict checkpoint.")
+
+    if "model_state_dict" in ckpt or "model_state" in ckpt:
+        return ckpt
+
+    # Some users save raw state_dict directly; allow downstream loader to report
+    # missing metadata with a more specific error.
+    if ckpt and all(torch.is_tensor(v) for v in ckpt.values()):
+        return {"model_state_dict": ckpt}
+
+    raise ValueError(
+        "Invalid checkpoint format. Expect dict with 'model_state_dict' or 'model_state'."
+    )
 
 
 def build_model_from_ckpt(
@@ -180,7 +192,34 @@ def build_runtime_from_ckpt(
         return model, class_names, meta
 
     if (model_script or "").strip().lower() == "efficientnetv2-segformer":
-        raise RuntimeError("TensorRT backend is not supported yet for MODEL_SCRIPT=efficientnetv2-segformer")
+        if device.type != "cuda":
+            raise RuntimeError("TensorRT backend requires DEVICE to be CUDA.")
+
+        if not hasattr(model, "model"):
+            raise RuntimeError("Internal error: efficientnet runtime adapter missing base model")
+
+        base_model = model.model
+        if not os.path.isfile(onnx_path):
+            export_image_model_to_onnx(base_model.classifier, out_path=onnx_path)
+
+        runtime = EfficientSegformerTensorRTRuntime(
+            base_model=base_model,
+            onnx_path=onnx_path,
+            engine_cache_dir=trt_engine_cache_dir,
+            use_fp16=trt_fp16,
+            strict=trt_strict,
+            workspace_gb=trt_workspace_gb,
+            device_id=trt_device_id,
+        )
+
+        runtime_meta = dict(meta)
+        runtime_meta["backend"] = "tensorrt"
+        runtime_meta["onnx_path"] = onnx_path
+        runtime_meta["trt_engine_cache_dir"] = trt_engine_cache_dir
+        runtime_meta["trt_fp16"] = trt_fp16
+        runtime_meta["trt_strict"] = trt_strict
+        runtime_meta["runtime"] = runtime.info.details
+        return runtime, class_names, runtime_meta
 
     if backend != "tensorrt":
         raise ValueError(f"Unsupported INFER_BACKEND='{infer_backend}'. Use 'pytorch' or 'tensorrt'.")

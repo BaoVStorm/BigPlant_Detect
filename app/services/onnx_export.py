@@ -59,3 +59,45 @@ def export_model_to_onnx(
         model.eval()
 
     return os.fspath(out_file)
+
+
+def export_image_model_to_onnx(
+    model: nn.Module,
+    out_path: str,
+    opset: int = 17,
+    input_name: str = "image",
+    output_name: str = "logits",
+) -> str:
+    out_file = Path(out_path)
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+
+    was_training = model.training
+    original_device = next(model.parameters()).device
+
+    model.eval()
+    model.to("cpu")
+
+    dummy_x = torch.randn(1, 3, 224, 224, dtype=torch.float32)
+
+    torch.onnx.export(
+        model,
+        (dummy_x,),
+        os.fspath(out_file),
+        export_params=True,
+        opset_version=opset,
+        do_constant_folding=True,
+        input_names=[input_name],
+        output_names=[output_name],
+        dynamic_axes={
+            input_name: {0: "batch"},
+            output_name: {0: "batch"},
+        },
+    )
+
+    model.to(original_device)
+    if was_training:
+        model.train()
+    else:
+        model.eval()
+
+    return os.fspath(out_file)
