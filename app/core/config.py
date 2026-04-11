@@ -28,7 +28,7 @@ if load_dotenv is not None:
 else:
     _load_env_file_fallback(_ENV_PATH)
 
-# Model script selector: organ_aware_switch_vit|efficientnetv2-segformer
+# Model script selector: organ_aware_switch_vit|efficientnetv2-segformer|efficientnetv2-mask2former
 MODEL_SCRIPT = os.getenv("MODEL_SCRIPT", "organ_aware_switch_vit").strip()
 
 MODEL_DIR = os.getenv("MODEL_DIR", "./model").strip()
@@ -48,7 +48,13 @@ def _resolve_model_path(model_script_dir: str) -> str:
     if model_env:
         if os.path.isabs(model_env):
             return model_env
-        return os.path.join(model_script_dir, model_env)
+        script_local = os.path.join(model_script_dir, model_env)
+        if os.path.isfile(script_local):
+            return script_local
+        model_root_local = os.path.join(MODEL_DIR, model_env)
+        if os.path.isfile(model_root_local):
+            return model_root_local
+        return script_local
 
     best_path = os.path.join(model_script_dir, "best_model.pt")
     if os.path.isfile(best_path):
@@ -58,6 +64,20 @@ def _resolve_model_path(model_script_dir: str) -> str:
     script_named_path = os.path.join(model_script_dir, f"{script_name}.pt")
     if os.path.isfile(script_named_path):
         return script_named_path
+
+    if script_name == "efficientnetv2-segformer":
+        segformer_ckpt = os.path.join(model_script_dir, "efficientnetv2s-segformerb4.pt")
+        if os.path.isfile(segformer_ckpt):
+            return segformer_ckpt
+
+    if script_name == "efficientnetv2-mask2former":
+        mask2former_candidates = [
+            os.path.join(model_script_dir, "efficientnetv2s-mask2former.pt"),
+            os.path.join(MODEL_DIR, "efficientnetv2s-mask2former.pt"),
+        ]
+        for p in mask2former_candidates:
+            if os.path.isfile(p):
+                return p
 
     return best_path
 

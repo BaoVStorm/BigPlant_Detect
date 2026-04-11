@@ -9,6 +9,7 @@ Hỗ trợ model script:
 
 - `organ_aware_switch_vit`
 - `efficientnetv2-segformer` (TensorRT chạy theo kiểu hybrid: SegFormer PyTorch + classifier TensorRT)
+- `efficientnetv2-mask2former` (Mask2Former foreground-guided + EfficientNetV2-S classifier)
 
 Giữ nguyên endpoint và cách chạy quen thuộc:
 
@@ -57,7 +58,7 @@ Giải thích nhanh biến quan trọng:
 - `MODEL`: (tuỳ chọn) tên file model `.pt` trong `./model/<MODEL_SCRIPT>/` hoặc đường dẫn tuyệt đối
 - `MODEL_DIR`: thư mục gốc chứa model theo từng script
 - `DEVICE`: `auto|cpu|cuda|cuda:0`
-- `MODEL_SCRIPT`: `organ_aware_switch_vit` hoặc `efficientnetv2-segformer`
+- `MODEL_SCRIPT`: `organ_aware_switch_vit` hoặc `efficientnetv2-segformer` hoặc `efficientnetv2-mask2former`
 - `INFER_BACKEND`: `pytorch` hoặc `tensorrt`
 - `ONNX_PATH`: mặc định tự suy ra `./model/<MODEL_SCRIPT>/<MODEL_SCRIPT>.onnx`
 - `TRT_ENGINE_CACHE_DIR`: mặc định `./model/<MODEL_SCRIPT>/<MODEL_SCRIPT>_trt_cache`
@@ -184,6 +185,24 @@ Thông số train của checkpoint (tham chiếu bạn cung cấp):
 
 Lưu ý: TensorRT cho `efficientnetv2-segformer` chạy theo hướng hybrid
 (SegFormer vẫn chạy PyTorch, classifier EfficientNet chạy TensorRT).
+
+## 11) Dùng model `efficientnetv2-mask2former`
+
+Checkpoint bạn cung cấp `efficientnetv2s-mask2former.pt` đã được hỗ trợ cho inference.
+
+```env
+MODEL_SCRIPT=efficientnetv2-mask2former
+INFER_BACKEND=pytorch
+MODEL_DIR=./model
+MODEL=efficientnetv2s-mask2former.pt
+```
+
+Gợi ý: có thể để file checkpoint ở:
+
+- `./model/efficientnetv2-mask2former/efficientnetv2s-mask2former.pt`
+- hoặc trực tiếp `./model/efficientnetv2s-mask2former.pt`
+
+Model này dùng Mask2Former để tách foreground trước khi classify bằng EfficientNetV2-S.
 
 ---
 

@@ -42,7 +42,7 @@ You should see `TensorrtExecutionProvider` in the output.
 
 Required/common:
 
-- `MODEL_SCRIPT` chọn thư mục model con (ví dụ `organ_aware_switch_vit`)
+- `MODEL_SCRIPT` chọn model script: `organ_aware_switch_vit` | `efficientnetv2-segformer` | `efficientnetv2-mask2former`
 - `MODEL_DIR` thư mục gốc model (mặc định `./model`)
 - `MODEL` (tuỳ chọn) tên file `.pt` trong `./model/<MODEL_SCRIPT>/`
 - `DEVICE` should be `cuda` or `cuda:0` for TensorRT
@@ -50,8 +50,8 @@ Required/common:
 
 TensorRT-specific:
 
-- `ONNX_PATH` output ONNX path (default `./model/best_model.onnx`)
-- `TRT_ENGINE_CACHE_DIR` engine cache folder (default `./model/trt_cache`)
+- `ONNX_PATH` output ONNX path (default `./model/<MODEL_SCRIPT>/<MODEL_SCRIPT>.onnx`)
+- `TRT_ENGINE_CACHE_DIR` engine cache folder (default `./model/<MODEL_SCRIPT>/<MODEL_SCRIPT>_trt_cache`)
 - `TRT_DEVICE_ID` GPU index (default `0`)
 - `TRT_FP16` enable fp16 (default `1`)
 - `TRT_STRICT` strict TensorRT-only provider, no fallback (default `1`)
@@ -123,3 +123,5 @@ curl http://127.0.0.1:8000/health
 - `routing` metrics are only fully available in PyTorch mode.
   In TensorRT mode, routing internals are not returned because exported graph only outputs
   classification logits and organ auxiliary logits.
+- Với `efficientnetv2-mask2former` và `efficientnetv2-segformer`, TensorRT chạy hybrid:
+  segmentation branch vẫn chạy PyTorch, classifier EfficientNet chạy TensorRT.

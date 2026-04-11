@@ -266,11 +266,14 @@ class EfficientSegformerTensorRTRuntime:
 
     def forward(self, x: torch.Tensor, prior: torch.Tensor | None = None):
         with torch.no_grad():
-            fg_mask = self.base_model._build_foreground_mask(x)
-            x_focus = x * (
-                self.base_model.min_keep_bg + (1.0 - self.base_model.min_keep_bg) * fg_mask
-            )
-            x_cls = (x_focus - self.base_model.mean) / self.base_model.std
+            if hasattr(self.base_model, "build_classifier_input"):
+                x_cls = self.base_model.build_classifier_input(x)
+            else:
+                fg_mask = self.base_model._build_foreground_mask(x)
+                x_focus = x * (
+                    self.base_model.min_keep_bg + (1.0 - self.base_model.min_keep_bg) * fg_mask
+                )
+                x_cls = (x_focus - self.base_model.mean) / self.base_model.std
 
         x_np = x_cls.detach().to("cpu").numpy().astype(np.float32, copy=False)
         outputs = self.session.run(None, {"image": x_np})

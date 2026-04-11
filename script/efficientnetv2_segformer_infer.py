@@ -96,11 +96,14 @@ class EffNetV2SegFormerClassifier(nn.Module):
         return torch.sigmoid((conf_norm - self.seg_threshold) * self.seg_temperature)
 
     def forward(self, x_raw: torch.Tensor):
+        x_cls = self.build_classifier_input(x_raw)
+        logits = self.classifier(x_cls)
+        return logits, None
+
+    def build_classifier_input(self, x_raw: torch.Tensor) -> torch.Tensor:
         fg_mask = self._build_foreground_mask(x_raw)
         x_focus = x_raw * (self.min_keep_bg + (1.0 - self.min_keep_bg) * fg_mask)
-        x_cls = (x_focus - self.mean) / self.std
-        logits = self.classifier(x_cls)
-        return logits, fg_mask
+        return (x_focus - self.mean) / self.std
 
 
 class EfficientSegformerInferenceAdapter(nn.Module):

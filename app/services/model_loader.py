@@ -23,9 +23,16 @@ def _resolve_model_class(model_script: str):
         )
         return EffNetV2SegFormerClassifier, EfficientSegformerInferenceAdapter
 
+    if script_name == "efficientnetv2-mask2former":
+        from script.efficientnetv2_mask2former_infer import (
+            EffNetV2Mask2FormerClassifier,
+            EfficientMask2FormerInferenceAdapter,
+        )
+        return EffNetV2Mask2FormerClassifier, EfficientMask2FormerInferenceAdapter
+
     raise ValueError(
         f"Unsupported MODEL_SCRIPT='{model_script}'. "
-        "Use 'organ_aware_switch_vit' or 'efficientnetv2-segformer'."
+        "Use 'organ_aware_switch_vit', 'efficientnetv2-segformer', or 'efficientnetv2-mask2former'."
     )
 
 
@@ -60,6 +67,8 @@ def build_model_from_ckpt(
 
     if script_name == "efficientnetv2-segformer":
         return build_efficientnetv2_segformer_from_ckpt(ckpt=ckpt, device=device, model_script=model_script)
+    if script_name == "efficientnetv2-mask2former":
+        return build_efficientnetv2_mask2former_from_ckpt(ckpt=ckpt, device=device, model_script=model_script)
 
     saved_args = ckpt.get("args", {}) or {}
     class_to_idx = ckpt.get("class_to_idx")
@@ -149,7 +158,23 @@ def build_efficientnetv2_segformer_from_ckpt(
     if any(k.startswith("module.") for k in state_dict.keys()):
         state_dict = {k[7:] if k.startswith("module.") else k: v for k, v in state_dict.items()}
 
-    base_model.load_state_dict(state_dict, strict=True)
+    try:
+        base_model.load_state_dict(state_dict, strict=True)
+    except RuntimeError:
+        try:
+            base_model.classifier.load_state_dict(state_dict, strict=True)
+        except RuntimeError:
+            if not any(k.startswith("classifier.") for k in state_dict.keys()):
+                raise
+            classifier_state = {
+                k[len("classifier.") :]: v
+                for k, v in state_dict.items()
+                if k.startswith("classifier.")
+            }
+            if not classifier_state:
+                raise
+            base_model.classifier.load_state_dict(classifier_state, strict=True)
+
     base_model.to(device).eval()
 
     model = adapter_cls(base_model).to(device).eval()
@@ -162,6 +187,79 @@ def build_efficientnetv2_segformer_from_ckpt(
         "seg_threshold": seg_threshold,
         "seg_temperature": seg_temperature,
         "min_keep_bg": min_keep_bg,
+        "organ_dim": 1,
+        "preprocess_mode": "raw_01",
+        "backend": "pytorch",
+    }
+    return model, class_names, meta
+
+
+def build_efficientnetv2_mask2former_from_ckpt(
+    ckpt: Dict[str, Any],
+    device: torch.device,
+    model_script: str,
+) -> Tuple[torch.nn.Module, List[str], Dict[str, Any]]:
+    saved_args = ckpt.get("args", {}) or {}
+
+    species_list = ckpt.get("species_list")
+    label_map = ckpt.get("label_map") or {}
+    if species_list:
+        class_names = list(species_list)
+    elif label_map:
+        idx_to_class = {int(v): k for k, v in label_map.items()}
+        class_names = [idx_to_class[i] for i in range(len(idx_to_class))]
+    else:
+        raise ValueError("Checkpoint missing species_list/label_map for efficientnetv2-mask2former")
+
+    num_classes = len(class_names)
+    model_cls, adapter_cls = _resolve_model_class("efficientnetv2-mask2former")
+
+    mask2former_model_id = saved_args.get(
+        "mask2former_model_id",
+        "facebook/mask2former-swin-small-coco-panoptic",
+    )
+    mask_score_threshold = float(saved_args.get("mask_score_threshold", 0.35))
+
+    base_model = model_cls(
+        num_classes=num_classes,
+        mask2former_model_id=mask2former_model_id,
+        mask_score_threshold=mask_score_threshold,
+        freeze_mask2former=True,
+    )
+
+    state_dict = ckpt.get("model_state") or ckpt.get("model_state_dict")
+    if state_dict is None:
+        raise ValueError("Checkpoint missing model_state/model_state_dict")
+
+    if any(k.startswith("module.") for k in state_dict.keys()):
+        state_dict = {k[7:] if k.startswith("module.") else k: v for k, v in state_dict.items()}
+
+    try:
+        base_model.load_state_dict(state_dict, strict=True)
+    except RuntimeError:
+        try:
+            base_model.classifier.load_state_dict(state_dict, strict=True)
+        except RuntimeError:
+            if not any(k.startswith("classifier.") for k in state_dict.keys()):
+                raise
+            classifier_state = {
+                k[len("classifier.") :]: v
+                for k, v in state_dict.items()
+                if k.startswith("classifier.")
+            }
+            if not classifier_state:
+                raise
+            base_model.classifier.load_state_dict(classifier_state, strict=True)
+
+    base_model.to(device).eval()
+
+    model = adapter_cls(base_model).to(device).eval()
+    meta = {
+        "model_script": model_script,
+        "model_name": "efficientnetv2s-mask2former",
+        "n_classes": num_classes,
+        "mask2former_model_id": mask2former_model_id,
+        "mask_score_threshold": mask_score_threshold,
         "organ_dim": 1,
         "preprocess_mode": "raw_01",
         "backend": "pytorch",
@@ -191,7 +289,7 @@ def build_runtime_from_ckpt(
     if backend == "pytorch":
         return model, class_names, meta
 
-    if (model_script or "").strip().lower() == "efficientnetv2-segformer":
+    if (model_script or "").strip().lower() in {"efficientnetv2-segformer", "efficientnetv2-mask2former"}:
         if device.type != "cuda":
             raise RuntimeError("TensorRT backend requires DEVICE to be CUDA.")
 
