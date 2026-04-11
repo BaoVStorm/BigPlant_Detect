@@ -28,7 +28,7 @@ if load_dotenv is not None:
 else:
     _load_env_file_fallback(_ENV_PATH)
 
-# Model script selector: organ_aware_switch_vit|efficientnetv2-segformer|efficientnetv2-mask2former
+# Model script selector: organ_aware_switch_vit|efficientnetv2-segformer|efficientnetv2-mask2former|mobilenetv3large-segformer
 MODEL_SCRIPT = os.getenv("MODEL_SCRIPT", "organ_aware_switch_vit").strip()
 
 MODEL_DIR = os.getenv("MODEL_DIR", "./model").strip()
@@ -76,6 +76,15 @@ def _resolve_model_path(model_script_dir: str) -> str:
             os.path.join(MODEL_DIR, "efficientnetv2s-mask2former.pt"),
         ]
         for p in mask2former_candidates:
+            if os.path.isfile(p):
+                return p
+
+    if script_name == "mobilenetv3large-segformer":
+        mobilenet_candidates = [
+            os.path.join(model_script_dir, "mobilenetv3large-segformerb4.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-segformerb4.pt"),
+        ]
+        for p in mobilenet_candidates:
             if os.path.isfile(p):
                 return p
 
