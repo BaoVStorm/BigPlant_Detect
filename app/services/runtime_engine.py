@@ -287,6 +287,6 @@ class EfficientSegformerTensorRTRuntime:
             details={
                 "providers": self.session.get_providers(),
                 "hybrid": True,
-                "hybrid_detail": "segformer in pytorch + efficientnet classifier in tensorrt",
+                "hybrid_detail": "segmentation branch in pytorch + classifier in tensorrt",
             },
         )

@@ -37,9 +37,16 @@ def _resolve_model_class(model_script: str):
         )
         return MobileNetV3LargeSegFormerClassifier, MobileNetSegFormerInferenceAdapter
 
+    if script_name == "mobilenetv3large-deeplabv3":
+        from script.mobilenetv3large_deeplabv3_infer import (
+            MobileNetV3DeepLabV3Classifier,
+            MobileNetDeepLabV3InferenceAdapter,
+        )
+        return MobileNetV3DeepLabV3Classifier, MobileNetDeepLabV3InferenceAdapter
+
     raise ValueError(
         f"Unsupported MODEL_SCRIPT='{model_script}'. "
-        "Use 'organ_aware_switch_vit', 'efficientnetv2-segformer', 'efficientnetv2-mask2former', or 'mobilenetv3large-segformer'."
+        "Use 'organ_aware_switch_vit', 'efficientnetv2-segformer', 'efficientnetv2-mask2former', 'mobilenetv3large-segformer', or 'mobilenetv3large-deeplabv3'."
     )
 
 
@@ -78,6 +85,8 @@ def build_model_from_ckpt(
         return build_efficientnetv2_mask2former_from_ckpt(ckpt=ckpt, device=device, model_script=model_script)
     if script_name == "mobilenetv3large-segformer":
         return build_mobilenetv3large_segformer_from_ckpt(ckpt=ckpt, device=device, model_script=model_script)
+    if script_name == "mobilenetv3large-deeplabv3":
+        return build_mobilenetv3large_deeplabv3_from_ckpt(ckpt=ckpt, device=device, model_script=model_script)
 
     saved_args = ckpt.get("args", {}) or {}
     class_to_idx = ckpt.get("class_to_idx")
@@ -349,6 +358,80 @@ def build_mobilenetv3large_segformer_from_ckpt(
     return model, class_names, meta
 
 
+def build_mobilenetv3large_deeplabv3_from_ckpt(
+    ckpt: Dict[str, Any],
+    device: torch.device,
+    model_script: str,
+) -> Tuple[torch.nn.Module, List[str], Dict[str, Any]]:
+    saved_args = ckpt.get("args", {}) or {}
+
+    species_list = ckpt.get("species_list")
+    label_map = ckpt.get("label_map") or {}
+    if species_list:
+        class_names = list(species_list)
+    elif label_map:
+        idx_to_class = {int(v): k for k, v in label_map.items()}
+        class_names = [idx_to_class[i] for i in range(len(idx_to_class))]
+    else:
+        raise ValueError("Checkpoint missing species_list/label_map for mobilenetv3large-deeplabv3")
+
+    num_classes = len(class_names)
+    model_cls, adapter_cls = _resolve_model_class("mobilenetv3large-deeplabv3")
+
+    seg_pretrained = bool(saved_args.get("seg_pretrained", True))
+    seg_freeze = bool(saved_args.get("seg_freeze", True))
+    mask_mode = str(saved_args.get("mask_mode", "attention"))
+
+    base_model = model_cls(
+        num_classes=num_classes,
+        seg_pretrained=seg_pretrained,
+        seg_freeze=seg_freeze,
+        mask_mode=mask_mode,
+    )
+
+    state_dict = ckpt.get("model_state") or ckpt.get("model_state_dict")
+    if state_dict is None:
+        raise ValueError("Checkpoint missing model_state/model_state_dict")
+
+    if any(k.startswith("module.") for k in state_dict.keys()):
+        state_dict = {k[7:] if k.startswith("module.") else k: v for k, v in state_dict.items()}
+
+    # Training script uses `cls_model.*` while API runtime uses `classifier.*`.
+    if any(k.startswith("cls_model.") for k in state_dict.keys()):
+        state_dict = {
+            ("classifier." + k[len("cls_model.") :]) if k.startswith("cls_model.") else k: v
+            for k, v in state_dict.items()
+        }
+
+    try:
+        base_model.load_state_dict(state_dict, strict=True)
+    except RuntimeError:
+        classifier_state = {
+            k[len("classifier.") :]: v
+            for k, v in state_dict.items()
+            if k.startswith("classifier.")
+        }
+        if not classifier_state:
+            raise
+        base_model.classifier.load_state_dict(classifier_state, strict=True)
+
+    base_model.to(device).eval()
+
+    model = adapter_cls(base_model).to(device).eval()
+    meta = {
+        "model_script": model_script,
+        "model_name": "mobilenetv3large-deeplabv3",
+        "n_classes": num_classes,
+        "seg_pretrained": seg_pretrained,
+        "seg_freeze": seg_freeze,
+        "mask_mode": mask_mode,
+        "organ_dim": 1,
+        "preprocess_mode": "imagenet_norm",
+        "backend": "pytorch",
+    }
+    return model, class_names, meta
+
+
 def build_runtime_from_ckpt(
     ckpt: Dict[str, Any],
     device: torch.device,
@@ -375,12 +458,13 @@ def build_runtime_from_ckpt(
         "efficientnetv2-segformer",
         "efficientnetv2-mask2former",
         "mobilenetv3large-segformer",
+        "mobilenetv3large-deeplabv3",
     }:
         if device.type != "cuda":
             raise RuntimeError("TensorRT backend requires DEVICE to be CUDA.")
 
         if not hasattr(model, "model"):
-            raise RuntimeError("Internal error: efficientnet runtime adapter missing base model")
+            raise RuntimeError("Internal error: hybrid runtime adapter missing base model")
 
         base_model = model.model
         if not os.path.isfile(onnx_path):

@@ -42,7 +42,7 @@ You should see `TensorrtExecutionProvider` in the output.
 
 Required/common:
 
-- `MODEL_SCRIPT` chọn model script: `organ_aware_switch_vit` | `efficientnetv2-segformer` | `efficientnetv2-mask2former` | `mobilenetv3large-segformer`
+- `MODEL_SCRIPT` chọn model script: `organ_aware_switch_vit` | `efficientnetv2-segformer` | `efficientnetv2-mask2former` | `mobilenetv3large-segformer` | `mobilenetv3large-deeplabv3`
 - `MODEL_DIR` thư mục gốc model (mặc định `./model`)
 - `MODEL` (tuỳ chọn) tên file `.pt` trong `./model/<MODEL_SCRIPT>/`
 - `DEVICE` should be `cuda` or `cuda:0` for TensorRT
@@ -123,5 +123,5 @@ curl http://127.0.0.1:8000/health
 - `routing` metrics are only fully available in PyTorch mode.
   In TensorRT mode, routing internals are not returned because exported graph only outputs
   classification logits and organ auxiliary logits.
-- Với `efficientnetv2-mask2former`, `efficientnetv2-segformer`, `mobilenetv3large-segformer`, TensorRT chạy hybrid:
+- Với `efficientnetv2-mask2former`, `efficientnetv2-segformer`, `mobilenetv3large-segformer`, `mobilenetv3large-deeplabv3`, TensorRT chạy hybrid:
   segmentation branch vẫn chạy PyTorch, classifier backbone chạy TensorRT.

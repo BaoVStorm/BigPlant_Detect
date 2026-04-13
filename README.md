@@ -11,6 +11,7 @@ Hỗ trợ model script:
 - `efficientnetv2-segformer` (TensorRT chạy theo kiểu hybrid: SegFormer PyTorch + classifier TensorRT)
 - `efficientnetv2-mask2former` (Mask2Former foreground-guided + EfficientNetV2-S classifier)
 - `mobilenetv3large-segformer` (SegFormer-B4 foreground-guided + MobileNetV3-Large classifier)
+- `mobilenetv3large-deeplabv3` (DeepLabV3 foreground-guided + MobileNetV3-Large classifier)
 
 Giữ nguyên endpoint và cách chạy quen thuộc:
 
@@ -59,7 +60,7 @@ Giải thích nhanh biến quan trọng:
 - `MODEL`: (tuỳ chọn) tên file model `.pt` trong `./model/<MODEL_SCRIPT>/` hoặc đường dẫn tuyệt đối
 - `MODEL_DIR`: thư mục gốc chứa model theo từng script
 - `DEVICE`: `auto|cpu|cuda|cuda:0`
-- `MODEL_SCRIPT`: `organ_aware_switch_vit` hoặc `efficientnetv2-segformer` hoặc `efficientnetv2-mask2former` hoặc `mobilenetv3large-segformer`
+- `MODEL_SCRIPT`: `organ_aware_switch_vit` hoặc `efficientnetv2-segformer` hoặc `efficientnetv2-mask2former` hoặc `mobilenetv3large-segformer` hoặc `mobilenetv3large-deeplabv3`
 - `INFER_BACKEND`: `pytorch` hoặc `tensorrt`
 - `ONNX_PATH`: mặc định tự suy ra `./model/<MODEL_SCRIPT>/<MODEL_SCRIPT>.onnx`
 - `TRT_ENGINE_CACHE_DIR`: mặc định `./model/<MODEL_SCRIPT>/<MODEL_SCRIPT>_trt_cache`
