@@ -74,6 +74,9 @@ uvicorn api_server:app --host 0.0.0.0 --port 8000
 ```
 
 D:\App\anaconda3\envs\pt_gpu\python.exe -m uvicorn api_server:app --host 0.0.0.0 --port 8000
+
+D:\App\anaconda3\envs\pt_gpu\python.exe -m uvicorn  D:\Homework\BackEnd\ModelDetectApi\api_server:app --host 0.0.0.0 --port 8000
+
 D:\App\anaconda3\envs\pt_gpu\python.exe -c "import ctypes; ctypes.WinDLL('nvinfer_10.dll'); ctypes.WinDLL('nvinfer_plugin_10.dll'); ctypes.WinDLL('nvonnxparser_10.dll'); print('TRT DLL chain OK')"
 
 Hoặc:
