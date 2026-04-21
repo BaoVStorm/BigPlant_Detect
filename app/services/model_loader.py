@@ -12,6 +12,7 @@ SUPPORTED_MODEL_SCRIPTS = {
     "mobilenetv3large-mask2former",
     "resnet50-segformer",
     "resnet50-deeplabv3",
+    "resnet50-mask2former",
 }
 
 
@@ -24,7 +25,7 @@ def _ensure_supported_model_script(model_script: str) -> str:
     if script_name not in SUPPORTED_MODEL_SCRIPTS:
         raise ValueError(
             f"Unsupported MODEL_SCRIPT='{model_script}'. "
-            "Use 'mobilenetv3large-deeplabv3', 'mobilenetv3large-mask2former', 'resnet50-segformer', or 'resnet50-deeplabv3'."
+            "Use 'mobilenetv3large-deeplabv3', 'mobilenetv3large-mask2former', 'resnet50-segformer', 'resnet50-deeplabv3', or 'resnet50-mask2former'."
         )
     return script_name
 
@@ -55,6 +56,14 @@ def _resolve_model_class(model_script: str):
         )
 
         return ResNet50DeepLabV3Classifier, ResNet50DeepLabV3InferenceAdapter
+
+    if script_name == "resnet50-mask2former":
+        from script.resnet50_mask2former_infer import (
+            ResNet50Mask2FormerClassifier,
+            ResNet50Mask2FormerInferenceAdapter,
+        )
+
+        return ResNet50Mask2FormerClassifier, ResNet50Mask2FormerInferenceAdapter
 
     from script.mobilenetv3large_mask2former_infer import (
         MobileNetMask2FormerInferenceAdapter,
@@ -208,6 +217,33 @@ def build_model_from_ckpt(
             "seg_pretrained": bool(saved_args.get("seg_pretrained", False)),
             "seg_freeze": bool(saved_args.get("seg_freeze", False)),
             "mask_mode": str(saved_args.get("mask_mode", "attention")),
+        }
+    elif script_name == "resnet50-mask2former":
+        unfreeze_seg = bool(saved_args.get("unfreeze_segmentation", False))
+        freeze_segmentation = not unfreeze_seg
+        base_model = model_cls(
+            num_classes=num_classes,
+            mask2former_name=str(
+                saved_args.get(
+                    "mask2former_name",
+                    "facebook/mask2former-swin-large-ade-semantic",
+                )
+            ),
+            seg_input_size=int(saved_args.get("seg_input_size", 384)),
+            mask_floor=float(saved_args.get("mask_floor", 0.15)),
+            freeze_segmentation=freeze_segmentation,
+        )
+        preprocess_mode = "raw_01"
+        meta_extra = {
+            "mask2former_name": str(
+                saved_args.get(
+                    "mask2former_name",
+                    "facebook/mask2former-swin-large-ade-semantic",
+                )
+            ),
+            "seg_input_size": int(saved_args.get("seg_input_size", 384)),
+            "mask_floor": float(saved_args.get("mask_floor", 0.15)),
+            "freeze_segmentation": freeze_segmentation,
         }
     else:
         unfreeze_seg = bool(saved_args.get("unfreeze_segmentation", False))
