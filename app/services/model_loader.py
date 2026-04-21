@@ -11,6 +11,7 @@ SUPPORTED_MODEL_SCRIPTS = {
     "mobilenetv3large-deeplabv3",
     "mobilenetv3large-mask2former",
     "resnet50-segformer",
+    "resnet50-deeplabv3",
 }
 
 
@@ -23,7 +24,7 @@ def _ensure_supported_model_script(model_script: str) -> str:
     if script_name not in SUPPORTED_MODEL_SCRIPTS:
         raise ValueError(
             f"Unsupported MODEL_SCRIPT='{model_script}'. "
-            "Use 'mobilenetv3large-deeplabv3', 'mobilenetv3large-mask2former', or 'resnet50-segformer'."
+            "Use 'mobilenetv3large-deeplabv3', 'mobilenetv3large-mask2former', 'resnet50-segformer', or 'resnet50-deeplabv3'."
         )
     return script_name
 
@@ -46,6 +47,14 @@ def _resolve_model_class(model_script: str):
         )
 
         return ResNet50SegFormerClassifier, ResNet50SegFormerInferenceAdapter
+
+    if script_name == "resnet50-deeplabv3":
+        from script.resnet50_deeplabv3_infer import (
+            ResNet50DeepLabV3Classifier,
+            ResNet50DeepLabV3InferenceAdapter,
+        )
+
+        return ResNet50DeepLabV3Classifier, ResNet50DeepLabV3InferenceAdapter
 
     from script.mobilenetv3large_mask2former_infer import (
         MobileNetMask2FormerInferenceAdapter,
@@ -186,6 +195,19 @@ def build_model_from_ckpt(
             "freeze_segformer": freeze_segformer,
             "mask_blend": float(saved_args.get("mask_blend", 1.0)),
             "background_keep": float(saved_args.get("background_keep", 0.15)),
+        }
+    elif script_name == "resnet50-deeplabv3":
+        base_model = model_cls(
+            num_classes=num_classes,
+            seg_pretrained=bool(saved_args.get("seg_pretrained", False)),
+            seg_freeze=bool(saved_args.get("seg_freeze", False)),
+            mask_mode=str(saved_args.get("mask_mode", "attention")),
+        )
+        preprocess_mode = "imagenet_norm"
+        meta_extra = {
+            "seg_pretrained": bool(saved_args.get("seg_pretrained", False)),
+            "seg_freeze": bool(saved_args.get("seg_freeze", False)),
+            "mask_mode": str(saved_args.get("mask_mode", "attention")),
         }
     else:
         unfreeze_seg = bool(saved_args.get("unfreeze_segmentation", False))
