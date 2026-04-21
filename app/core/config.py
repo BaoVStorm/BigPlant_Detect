@@ -28,7 +28,7 @@ if load_dotenv is not None:
 else:
     _load_env_file_fallback(_ENV_PATH)
 
-# Only supported model script
+# Supported: mobilenetv3large-deeplabv3 | mobilenetv3large-mask2former
 MODEL_SCRIPT = os.getenv("MODEL_SCRIPT", "mobilenetv3large-deeplabv3").strip()
 
 MODEL_DIR = os.getenv("MODEL_DIR", "./model").strip()
@@ -65,17 +65,35 @@ def _resolve_model_path(model_script_dir: str) -> str:
     if os.path.isfile(script_named_path):
         return script_named_path
 
-    mobilenet_deeplab_candidates = [
-        os.path.join(model_script_dir, "mobilenetv3large-deeplabv3.pt"),
-        os.path.join(model_script_dir, "mobilenetv3large-deeplabv3-512x512.pt"),
-        os.path.join(model_script_dir, "mobilenetv3large-deeplabv3-384x384.pt"),
-        os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3.pt"),
-        os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3-512x512.pt"),
-        os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3-384x384.pt"),
-    ]
-    for p in mobilenet_deeplab_candidates:
-        if os.path.isfile(p):
-            return p
+    if script_name == "mobilenetv3large-mask2former":
+        candidates = [
+            os.path.join(model_script_dir, "mobilenetv3large-mask2former.pt"),
+            os.path.join(model_script_dir, "mobilenetv3large-mask2former-512x512.pt"),
+            os.path.join(model_script_dir, "mobilenetv3large-mask2former-384x384.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-mask2former.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-mask2former-512x512.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-mask2former-384x384.pt"),
+        ]
+        for p in candidates:
+            if os.path.isfile(p):
+                return p
+    elif script_name == "mobilenetv3large-deeplabv3":
+        candidates = [
+            os.path.join(model_script_dir, "mobilenetv3large-deeplabv3.pt"),
+            os.path.join(model_script_dir, "mobilenetv3large-deeplabv3-512x512.pt"),
+            os.path.join(model_script_dir, "mobilenetv3large-deeplabv3-384x384.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3-512x512.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3-384x384.pt"),
+        ]
+        for p in candidates:
+            if os.path.isfile(p):
+                return p
+    else:
+        raise ValueError(
+            f"Unsupported MODEL_SCRIPT='{MODEL_SCRIPT}'. "
+            "Use 'mobilenetv3large-deeplabv3' or 'mobilenetv3large-mask2former'."
+        )
 
     return best_path
 
