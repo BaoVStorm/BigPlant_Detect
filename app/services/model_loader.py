@@ -10,6 +10,7 @@ from app.services.runtime_engine import EfficientSegformerTensorRTRuntime
 SUPPORTED_MODEL_SCRIPTS = {
     "mobilenetv3large-deeplabv3",
     "mobilenetv3large-mask2former",
+    "resnet50-segformer",
 }
 
 
@@ -22,7 +23,7 @@ def _ensure_supported_model_script(model_script: str) -> str:
     if script_name not in SUPPORTED_MODEL_SCRIPTS:
         raise ValueError(
             f"Unsupported MODEL_SCRIPT='{model_script}'. "
-            "Use 'mobilenetv3large-deeplabv3' or 'mobilenetv3large-mask2former'."
+            "Use 'mobilenetv3large-deeplabv3', 'mobilenetv3large-mask2former', or 'resnet50-segformer'."
         )
     return script_name
 
@@ -37,6 +38,14 @@ def _resolve_model_class(model_script: str):
         )
 
         return MobileNetV3DeepLabV3Classifier, MobileNetDeepLabV3InferenceAdapter
+
+    if script_name == "resnet50-segformer":
+        from script.resnet50_segformer_infer import (
+            ResNet50SegFormerClassifier,
+            ResNet50SegFormerInferenceAdapter,
+        )
+
+        return ResNet50SegFormerClassifier, ResNet50SegFormerInferenceAdapter
 
     from script.mobilenetv3large_mask2former_infer import (
         MobileNetMask2FormerInferenceAdapter,
@@ -150,6 +159,33 @@ def build_model_from_ckpt(
             "seg_pretrained": bool(saved_args.get("seg_pretrained", True)),
             "seg_freeze": bool(saved_args.get("seg_freeze", True)),
             "mask_mode": str(saved_args.get("mask_mode", "attention")),
+        }
+    elif script_name == "resnet50-segformer":
+        unfreeze_segformer = bool(saved_args.get("unfreeze_segformer", False))
+        freeze_segformer = not unfreeze_segformer
+        base_model = model_cls(
+            num_classes=num_classes,
+            segformer_name=str(
+                saved_args.get(
+                    "segformer_name",
+                    "nvidia/segformer-b4-finetuned-ade-512-512",
+                )
+            ),
+            freeze_segformer=freeze_segformer,
+            mask_blend=float(saved_args.get("mask_blend", 1.0)),
+            background_keep=float(saved_args.get("background_keep", 0.15)),
+        )
+        preprocess_mode = "imagenet_norm"
+        meta_extra = {
+            "segformer_name": str(
+                saved_args.get(
+                    "segformer_name",
+                    "nvidia/segformer-b4-finetuned-ade-512-512",
+                )
+            ),
+            "freeze_segformer": freeze_segformer,
+            "mask_blend": float(saved_args.get("mask_blend", 1.0)),
+            "background_keep": float(saved_args.get("background_keep", 0.15)),
         }
     else:
         unfreeze_seg = bool(saved_args.get("unfreeze_segmentation", False))
