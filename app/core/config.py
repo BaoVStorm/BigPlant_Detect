@@ -28,7 +28,7 @@ if load_dotenv is not None:
 else:
     _load_env_file_fallback(_ENV_PATH)
 
-# Supported: mobilenetv3large-deeplabv3 | mobilenetv3large-mask2former | resnet50-segformer | resnet50-deeplabv3 | resnet50-mask2former
+# Supported: mobilenetv3large-deeplabv3 | mobilenetv3large-mask2former | mobilenetv3large-segformer | resnet50-segformer | resnet50-deeplabv3 | resnet50-mask2former
 MODEL_SCRIPT = os.getenv("MODEL_SCRIPT", "mobilenetv3large-deeplabv3").strip()
 
 MODEL_DIR = os.getenv("MODEL_DIR", "./model").strip()
@@ -89,6 +89,18 @@ def _resolve_model_path(model_script_dir: str) -> str:
         for p in candidates:
             if os.path.isfile(p):
                 return p
+    elif script_name == "mobilenetv3large-segformer":
+        candidates = [
+            os.path.join(model_script_dir, "mobilenetv3large-segformerb4.pt"),
+            os.path.join(model_script_dir, "mobilenetv3large-segformerb4-512x512.pt"),
+            os.path.join(model_script_dir, "mobilenetv3large-segformerb4-384x384.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-segformerb4.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-segformerb4-512x512.pt"),
+            os.path.join(MODEL_DIR, "mobilenetv3large-segformerb4-384x384.pt"),
+        ]
+        for p in candidates:
+            if os.path.isfile(p):
+                return p
     elif script_name == "resnet50-segformer":
         candidates = [
             os.path.join(model_script_dir, "resnet50-segformer.pt"),
@@ -128,7 +140,7 @@ def _resolve_model_path(model_script_dir: str) -> str:
     else:
         raise ValueError(
             f"Unsupported MODEL_SCRIPT='{MODEL_SCRIPT}'. "
-            "Use 'mobilenetv3large-deeplabv3', 'mobilenetv3large-mask2former', 'resnet50-segformer', 'resnet50-deeplabv3', or 'resnet50-mask2former'."
+            "Use 'mobilenetv3large-deeplabv3', 'mobilenetv3large-mask2former', 'mobilenetv3large-segformer', 'resnet50-segformer', 'resnet50-deeplabv3', or 'resnet50-mask2former'."
         )
 
     return best_path
