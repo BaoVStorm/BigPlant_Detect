@@ -268,6 +268,21 @@ class EfficientSegformerTensorRTRuntime:
         with torch.no_grad():
             if hasattr(self.base_model, "build_classifier_input"):
                 x_cls = self.base_model.build_classifier_input(x)
+            elif (
+                hasattr(self.base_model, "seg_model")
+                and hasattr(self.base_model, "_build_foreground_mask")
+                and hasattr(self.base_model, "_apply_mask")
+            ):
+                if bool(getattr(self.base_model, "seg_freeze", False)):
+                    self.base_model.seg_model.eval()
+                    seg_ctx = torch.no_grad()
+                else:
+                    seg_ctx = torch.enable_grad()
+
+                with seg_ctx:
+                    seg_logits = self.base_model.seg_model(x)["out"]
+                fg_mask = self.base_model._build_foreground_mask(x, seg_logits)
+                x_cls = self.base_model._apply_mask(x, fg_mask)
             else:
                 fg_mask = self.base_model._build_foreground_mask(x)
                 x_focus = x * (

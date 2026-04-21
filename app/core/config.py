@@ -28,8 +28,8 @@ if load_dotenv is not None:
 else:
     _load_env_file_fallback(_ENV_PATH)
 
-# Model script selector: organ_aware_switch_vit|efficientnetv2-segformer|efficientnetv2-mask2former|mobilenetv3large-segformer|mobilenetv3large-deeplabv3
-MODEL_SCRIPT = os.getenv("MODEL_SCRIPT", "organ_aware_switch_vit").strip()
+# Only supported model script
+MODEL_SCRIPT = os.getenv("MODEL_SCRIPT", "mobilenetv3large-deeplabv3").strip()
 
 MODEL_DIR = os.getenv("MODEL_DIR", "./model").strip()
 MODEL_SCRIPT_DIR = os.path.join(MODEL_DIR, MODEL_SCRIPT)
@@ -65,44 +65,36 @@ def _resolve_model_path(model_script_dir: str) -> str:
     if os.path.isfile(script_named_path):
         return script_named_path
 
-    if script_name == "efficientnetv2-segformer":
-        segformer_ckpt = os.path.join(model_script_dir, "efficientnetv2s-segformerb4.pt")
-        if os.path.isfile(segformer_ckpt):
-            return segformer_ckpt
-
-    if script_name == "efficientnetv2-mask2former":
-        mask2former_candidates = [
-            os.path.join(model_script_dir, "efficientnetv2s-mask2former.pt"),
-            os.path.join(MODEL_DIR, "efficientnetv2s-mask2former.pt"),
-        ]
-        for p in mask2former_candidates:
-            if os.path.isfile(p):
-                return p
-
-    if script_name == "mobilenetv3large-segformer":
-        mobilenet_candidates = [
-            os.path.join(model_script_dir, "mobilenetv3large-segformerb4.pt"),
-            os.path.join(MODEL_DIR, "mobilenetv3large-segformerb4.pt"),
-        ]
-        for p in mobilenet_candidates:
-            if os.path.isfile(p):
-                return p
-
-    if script_name == "mobilenetv3large-deeplabv3":
-        mobilenet_deeplab_candidates = [
-            os.path.join(model_script_dir, "mobilenetv3large-deeplabv3.pt"),
-            os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3.pt"),
-        ]
-        for p in mobilenet_deeplab_candidates:
-            if os.path.isfile(p):
-                return p
+    mobilenet_deeplab_candidates = [
+        os.path.join(model_script_dir, "mobilenetv3large-deeplabv3.pt"),
+        os.path.join(model_script_dir, "mobilenetv3large-deeplabv3-512x512.pt"),
+        os.path.join(model_script_dir, "mobilenetv3large-deeplabv3-384x384.pt"),
+        os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3.pt"),
+        os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3-512x512.pt"),
+        os.path.join(MODEL_DIR, "mobilenetv3large-deeplabv3-384x384.pt"),
+    ]
+    for p in mobilenet_deeplab_candidates:
+        if os.path.isfile(p):
+            return p
 
     return best_path
 
 
-def _default_onnx_path(model_script: str, model_script_dir: str) -> str:
-    script_name = (model_script or "organ_aware_switch_vit").strip().lower()
-    return os.path.join(model_script_dir, f"{script_name}.onnx")
+def _checkpoint_stem(ckpt_path: str, fallback_model_script: str) -> str:
+    ckpt_name = os.path.splitext(os.path.basename((ckpt_path or "").strip()))[0].strip()
+    if ckpt_name:
+        return ckpt_name
+    return (fallback_model_script or "mobilenetv3large-deeplabv3").strip().lower()
+
+
+def _default_onnx_path(model_script_dir: str, ckpt_path: str, fallback_model_script: str) -> str:
+    stem = _checkpoint_stem(ckpt_path, fallback_model_script)
+    return os.path.join(model_script_dir, f"{stem}.onnx")
+
+
+def _default_trt_cache_dir(model_script_dir: str, ckpt_path: str, fallback_model_script: str) -> str:
+    stem = _checkpoint_stem(ckpt_path, fallback_model_script)
+    return os.path.join(model_script_dir, f"{stem}_trt_cache")
 
 
 def _env_or_default(name: str, default: str) -> str:
@@ -119,10 +111,13 @@ CHECKPOINT_PATH = _resolve_model_path(MODEL_SCRIPT_DIR)
 INFER_BACKEND = os.getenv("INFER_BACKEND", "pytorch").strip().lower()
 
 # TensorRT/ONNX settings
-ONNX_PATH = _env_or_default("ONNX_PATH", _default_onnx_path(MODEL_SCRIPT, MODEL_SCRIPT_DIR))
+ONNX_PATH = _env_or_default(
+    "ONNX_PATH",
+    _default_onnx_path(MODEL_SCRIPT_DIR, CHECKPOINT_PATH, MODEL_SCRIPT),
+)
 TRT_ENGINE_CACHE_DIR = _env_or_default(
     "TRT_ENGINE_CACHE_DIR",
-    os.path.join(MODEL_SCRIPT_DIR, f"{MODEL_SCRIPT.strip().lower()}_trt_cache"),
+    _default_trt_cache_dir(MODEL_SCRIPT_DIR, CHECKPOINT_PATH, MODEL_SCRIPT),
 )
 TRT_DEVICE_ID = int(os.getenv("TRT_DEVICE_ID", "0"))
 TRT_FP16 = os.getenv("TRT_FP16", "1") in {"1", "true", "True", "yes", "on"}
