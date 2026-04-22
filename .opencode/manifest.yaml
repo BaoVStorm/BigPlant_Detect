@@ -1,0 +1,26 @@
+version: 1
+project:
+  name: ModelDetectApi
+  language: python
+  framework: fastapi
+  repo_root: .
+
+load_order:
+  context:
+    - .opencode/context/project.md
+    - .opencode/context/api_contract.md
+    - .opencode/context/models_and_preprocess.md
+    - .opencode/context/tensorrt_runtime.md
+    - .opencode/context/benchmarking.md
+  skills:
+    - .opencode/skills/add_new_model_script.md
+    - .opencode/skills/benchmark_backends.md
+    - .opencode/skills/diagnose_tensorrt.md
+  agents:
+    - .opencode/agents/backend_maintainer.md
+
+defaults:
+  guardrails:
+    - Keep API endpoints unchanged unless explicitly requested.
+    - Do not couple PyTorch backend to ONNX artifacts.
+    - Prefer additive changes; avoid deleting model support by default.
