@@ -73,6 +73,8 @@ Giải thích nhanh biến quan trọng:
 uvicorn api_server:app --host 0.0.0.0 --port 8000
 ```
 
+<!-- adb reverse tcp:3104 tcp:3104 -->
+
 D:\App\anaconda3\envs\pt_gpu\python.exe -m uvicorn api_server:app --host 0.0.0.0 --port 8000
 
 D:\App\anaconda3\envs\pt_gpu\python.exe -m uvicorn  D:\Homework\BackEnd\ModelDetectApi\api_server:app --host 0.0.0.0 --port 8000

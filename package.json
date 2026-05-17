@@ -1,0 +1,20 @@
+{
+  "name": "modeldetectapi",
+  "version": "1.0.0",
+  "description": "API nhận diện ảnh thực vật với FastAPI, hỗ trợ 2 backend suy luận:",
+  "main": "index.js",
+  "scripts": {
+    "start": "\"D:\\App\\anaconda3\\envs\\pt_gpu\\python.exe\" -m uvicorn api_server:app --host 0.0.0.0 --port 8000",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BaoVStorm/BigPlant_Detect.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BaoVStorm/BigPlant_Detect/issues"
+  },
+  "homepage": "https://github.com/BaoVStorm/BigPlant_Detect#readme"
+}
