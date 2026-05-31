@@ -4,7 +4,7 @@
   "description": "API nhận diện ảnh thực vật với FastAPI, hỗ trợ 2 backend suy luận:",
   "main": "index.js",
   "scripts": {
-    "start": "\"D:\\App\\anaconda3\\envs\\pt_gpu\\python.exe\" -m uvicorn api_server:app --host 0.0.0.0 --port 8000",
+    "start": "bash -lc 'set -a; source .env; set +a; : \"${PORT:?PORT is not set in .env}\"; : \"${PYTHON_BIN:?PYTHON_BIN is not set in .env}\"; : \"${SSH_REMOTE_HOST:?SSH_REMOTE_HOST is not set in .env}\"; \"$PYTHON_BIN\" -m uvicorn api_server:app --host \"${UVICORN_HOST:-0.0.0.0}\" --port \"$PORT\" & API_PID=$!; trap \"kill $API_PID\" EXIT; sleep 3; ssh -N -R \"0.0.0.0:${PORT}:localhost:${PORT}\" \"$SSH_REMOTE_HOST\"'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
