@@ -114,6 +114,18 @@ def _verify(onnx_path: str, inputs: dict, torch_logits: torch.Tensor) -> None:
     print(f"  [verify] max|onnx - torch| logits = {diff:.3e}")
 
 
+def _embed_external_data(onnx_path: str) -> None:
+    """If torch.onnx.export produces a .onnx.data file, embed it back into the main .onnx file."""
+    data_path = f"{onnx_path}.data"
+    if os.path.exists(data_path):
+        print(f"  [cleanup] Re-embedding external data from {data_path} into {onnx_path}...")
+        import onnx
+        model = onnx.load(onnx_path, load_external_data=True)
+        onnx.save(model, onnx_path)
+        os.remove(data_path)
+        print("  [cleanup] Done. Removed external data file.")
+
+
 # ---------------------------------------------------------------------------
 # ONNX-safe wrappers for the MoE-based models (eval, top_k == 1)
 # ---------------------------------------------------------------------------
@@ -226,6 +238,7 @@ def export_dinov2(ckpt_path: str, out_path: str, opset: int) -> None:
             output_names=["logits"],
             dynamic_axes={"image": {0: "batch"}, "logits": {0: "batch"}},
         )
+    _embed_external_data(out_path)
     print(f"[dinov2] -> {out_path}")
     _verify(out_path, {"image": dummy}, torch_logits)
 
@@ -272,6 +285,7 @@ def export_organ_moe(ckpt_path: str, out_path: str, opset: int) -> None:
                 "aux_org": {0: "batch"},
             },
         )
+    _embed_external_data(out_path)
     print(f"[organ-aware-v-moe] -> {out_path}")
     _verify(out_path, {"image": dummy_img, "organ_prior": dummy_prior}, torch_logits)
 
@@ -322,6 +336,7 @@ def export_hybrid(ckpt_path: str, out_path: str, opset: int) -> None:
                 "aux_org": {0: "batch"},
             },
         )
+    _embed_external_data(out_path)
     print(f"[hybrid-model] -> {out_path}")
     _verify(out_path, {"image": dummy_img, "organ_prior": dummy_prior}, torch_logits)
 
