@@ -2,3 +2,6 @@
 .env
 /benchmark_outputs/
 nul
+
+__pycache__/
+*.pyc
