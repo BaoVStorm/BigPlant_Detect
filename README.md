@@ -12,6 +12,9 @@ Hỗ trợ model script:
 - `efficientnetv2-mask2former` (Mask2Former foreground-guided + EfficientNetV2-S classifier)
 - `mobilenetv3large-segformer` (SegFormer-B4 foreground-guided + MobileNetV3-Large classifier)
 - `mobilenetv3large-deeplabv3` (DeepLabV3 foreground-guided + MobileNetV3-Large classifier)
+- `dinov2` (DINOv2 backbone với classifier head)
+- `organ-aware-v-moe` (Organ-Aware Switch-MoE ViT)
+- `hybridmodel` (Hybrid Model kết hợp Organ-Aware MoE, DINOv2 và SegFormer)
 
 Giữ nguyên endpoint và cách chạy quen thuộc:
 
@@ -227,6 +230,54 @@ Vị trí file khuyến nghị:
 - `./model/mobilenetv3large-segformer/mobilenetv3large-segformerb4.pt`
 
 Model này dùng SegFormer-B4 tạo foreground mask và MobileNetV3-Large để classify.
+
+## 13) Dùng model `dinov2`
+
+Hỗ trợ inference (ONNX/TensorRT và PyTorch) cho mô hình DINOv2 classifier.
+
+```env
+MODEL_SCRIPT=dinov2
+INFER_BACKEND=tensorrt
+MODEL_DIR=./model
+MODEL=dinov2.pt
+```
+
+Vị trí file khuyến nghị:
+
+- `./model/dinov2/dinov2.pt`
+- `./model/dinov2/dinov2.onnx`
+
+## 14) Dùng model `organ-aware-v-moe`
+
+Hỗ trợ inference cho Organ-Aware Switch-MoE ViT. ONNX/TensorRT sử dụng wrapper đã được static hóa cho inference.
+
+```env
+MODEL_SCRIPT=organ-aware-v-moe
+INFER_BACKEND=tensorrt
+MODEL_DIR=./model
+MODEL=organ-aware-v-moe.pt
+```
+
+Vị trí file khuyến nghị:
+
+- `./model/organ-aware-v-moe/organ-aware-v-moe.pt`
+- `./model/organ-aware-v-moe/organ-aware-v-moe.onnx`
+
+## 15) Dùng model `hybridmodel`
+
+Hỗ trợ inference cho Hybrid Model kết hợp nhánh Organ-Aware, DINOv2 và SegFormer.
+
+```env
+MODEL_SCRIPT=hybridmodel
+INFER_BACKEND=tensorrt
+MODEL_DIR=./model
+MODEL=hybrid-model.pt
+```
+
+Vị trí file khuyến nghị:
+
+- `./model/hybridmodel/hybrid-model.pt`
+- `./model/hybridmodel/hybrid-model.onnx`
 
 ---
 
