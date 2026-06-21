@@ -121,6 +121,10 @@ def _embed_external_data(onnx_path: str) -> None:
         print(f"  [cleanup] Re-embedding external data from {data_path} into {onnx_path}...")
         import onnx
         model = onnx.load(onnx_path, load_external_data=True)
+        for tensor in model.graph.initializer:
+            if tensor.HasField("data_location") and tensor.data_location == onnx.TensorProto.EXTERNAL:
+                tensor.data_location = onnx.TensorProto.DEFAULT
+                del tensor.external_data[:]
         onnx.save(model, onnx_path)
         os.remove(data_path)
         print("  [cleanup] Done. Removed external data file.")
